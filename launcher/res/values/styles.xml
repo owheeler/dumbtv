@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="console">#FF1D1A2B</color>
     <style name="Home" parent="android:Theme.DeviceDefault.NoActionBar.Fullscreen">
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:colorBackground">@android:color/black</item>
-        <item name="android:colorAccent">#FF3D8BFF</item>
+        <item name="android:windowBackground">@color/console</item>
+        <item name="android:colorBackground">@color/console</item>
+        <item name="android:colorAccent">#FFF8D030</item>
         <item name="android:windowShowWallpaper">false</item>
         <item name="android:windowContentOverlay">@null</item>
     </style>

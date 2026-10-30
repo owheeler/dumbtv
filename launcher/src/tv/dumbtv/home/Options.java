@@ -1,14 +1,11 @@
 package tv.dumbtv.home;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.graphics.drawable.StateListDrawable;
+import android.content.Intent;
 import android.media.tv.TvInputManager;
 import android.os.Bundle;
-import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -20,6 +17,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /** Every setting is a row: left/right or OK cycles it, and the change is saved at once. */
 public final class Options extends Activity {
@@ -27,49 +25,55 @@ public final class Options extends Activity {
 
     private final List<Runnable> refreshers = new ArrayList<>();
     private Config cfg;
+    private int u;
+    private boolean keyMove;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         cfg = Config.get(this);
+        u = Ui.px(this);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFocusable(false);
         scroll.setVerticalScrollBarEnabled(false);
-        scroll.setBackgroundColor(0xFF0C0C0E);
+        scroll.setBackgroundColor(Ui.BG);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(56), dp(40), dp(56), dp(40));
+        list.setPadding(u * 24, u * 14, u * 24, u * 14);
         scroll.addView(list);
 
-        TextView title = Ui.text(this, 30, Ui.TEXT, Ui.LIGHT);
-        title.setText("Options");
-        title.setPadding(dp(16), 0, 0, dp(20));
+        TextView title = Ui.pixelText(this, 12, Ui.YELLOW);
+        title.setText("OPTIONS");
+        title.setPadding(0, 0, 0, u * 10);
         list.addView(title);
 
         for (Config.Choice c : Config.CHOICES) list.addView(choice(c));
-        list.addView(action("Next wallpaper", () -> {
-            cfg.nextWallpaper();
-            refresh();
-        }));
         list.addView(gap());
-        list.addView(action("Apps on home screen", () -> pick(Catalog.APPS)));
-        list.addView(action("Inputs on home screen", () -> pick(Catalog.INPUTS)));
-        list.addView(action("Reset order, names and hidden tiles", this::reset));
+        Intent store = Catalog.appstore(this);
+        if (store != null) {
+            list.addView(action("Open Appstore (updates)", () -> {
+                try {
+                    startActivity(store.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (ActivityNotFoundException | SecurityException e) {
+                    Sound.play(this, Sound.ERROR);
+                }
+            }));
+        }
+        list.addView(action("Apps on the shelf", () -> pick(Catalog.APPS)));
+        list.addView(action("Ports shown", () -> pick(Catalog.INPUTS)));
+        list.addView(action("Reset order, names, hidden", this::reset));
         list.addView(action("Open Amazon's home screen", () -> {
             Guard.amazon(this);
             finish();
         }));
 
-        TextView about = Ui.text(this, 13, Ui.FAINT, Ui.MEDIUM);
-        about.setLineSpacing(0, 1.4f);
-        about.setPadding(dp(16), dp(28), 0, 0);
-        about.setText("Settings file: " + cfg.dir + "/" + Config.FILE
-                + "\nOne wallpaper: name it exactly wallpaper.jpg (or .png) and put it in that folder"
-                + "\nSeveral wallpapers: put them in " + Config.WALLPAPERS + "/ with any names, and pick a rotation"
-                + "\nThen pick Background › Image file or Adaptive wallpaper tint. No permission is needed"
-                + "\nAdaptive wallpaper tint shows graphite until you add a wallpaper"
-                + "\nNo internet permission. No tracking, no ads, no accounts.");
+        TextView about = Ui.pixelText(this, 4, Ui.GREY);
+        about.setPadding(0, u * 12, 0, 0);
+        about.setText(("Settings file: " + cfg.dir + "/" + Config.FILE
+                + "\nParent mode: hold MENU for 3 seconds on the home screen"
+                + "\nUpdate one app: in parent mode hold OK on its cart, then Appstore page"
+                + "\nNo internet permission. No tracking, no ads, no accounts.").toUpperCase(Locale.ROOT));
         list.addView(about);
 
         setContentView(scroll);
@@ -83,14 +87,27 @@ public final class Options extends Activity {
         refresh();
     }
 
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        int code = e.getKeyCode();
+        keyMove = e.getAction() == KeyEvent.ACTION_DOWN
+                && (code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_DOWN);
+        if (code == KeyEvent.KEYCODE_BACK && e.getAction() == KeyEvent.ACTION_UP) Sound.play(this, Sound.BACK);
+        try {
+            return super.dispatchKeyEvent(e);
+        } finally {
+            keyMove = false;
+        }
+    }
+
     private void refresh() {
         for (Runnable r : refreshers) r.run();
     }
 
     private View choice(Config.Choice c) {
         LinearLayout row = row();
-        TextView name = label(c.title);
-        TextView value = Ui.text(this, 16, Ui.MUTED, Ui.MEDIUM);
+        TextView name = Ui.pixelText(this, 6, Ui.WHITE);
+        TextView value = Ui.pixelText(this, 6, Ui.YELLOW);
         value.setGravity(Gravity.END);
         row.addView(name, new LinearLayout.LayoutParams(0, WRAP, 1f));
         row.addView(value, new LinearLayout.LayoutParams(WRAP, WRAP));
@@ -102,27 +119,13 @@ public final class Options extends Activity {
             return false;
         });
         Runnable show = () -> {
-            boolean focused = row.isFocused();
-            String text = c.name(cfg.get(c));
-            if (c == Config.ACCENT) {
-                SpannableString s = new SpannableString("●  " + text);
-                s.setSpan(new ForegroundColorSpan(cfg.accent()), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                value.setText(focused ? "‹  " : "");
-                value.append(s);
-                if (focused) value.append("  ›");
-            } else {
-                value.setText(focused ? "‹  " + text + "  ›" : text);
-            }
-            value.setTextColor(focused ? Ui.TEXT : Ui.MUTED);
-            boolean off = (c == Config.DIM || c == Config.ROTATE)
-                    && !"image".equals(cfg.get(Config.BACKGROUND))
-                    && !"adaptive-tint".equals(cfg.get(Config.BACKGROUND))
-                    || c == Config.SWITCH && "off".equals(cfg.get(Config.INPUTS));
+            String text = c.name(cfg.get(c)).toUpperCase(Locale.ROOT);
+            value.setText(row.isFocused() ? "◀ " + text + " ▶" : text);
+            boolean off = c == Config.SWITCH && "off".equals(cfg.get(Config.INPUTS));
             row.setAlpha(off ? 0.4f : 1f);
         };
-        row.setOnFocusChangeListener((v, has) -> show.run());
         refreshers.add(show);
-        refreshers.add(() -> style(row));
+        watchFocus(row, name, c.title, show);
         return row;
     }
 
@@ -130,19 +133,32 @@ public final class Options extends Activity {
         int i = Arrays.asList(c.values).indexOf(cfg.get(c));
         int n = c.values.length;
         cfg.set(c.key, c.values[((i + by) % n + n) % n]);
+        Sound.play(this, Sound.SELECT);
         refresh();
         return true;
     }
 
     private View action(String text, Runnable run) {
         LinearLayout row = row();
-        row.addView(label(text), new LinearLayout.LayoutParams(0, WRAP, 1f));
-        TextView chevron = Ui.text(this, 16, Ui.MUTED, Ui.MEDIUM);
-        chevron.setText("›");
-        row.addView(chevron);
-        row.setOnClickListener(v -> run.run());
-        refreshers.add(() -> style(row));
+        TextView name = Ui.pixelText(this, 6, Ui.WHITE);
+        row.addView(name, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        row.setOnClickListener(v -> {
+            Sound.play(this, Sound.SELECT);
+            run.run();
+        });
+        watchFocus(row, name, text, null);
         return row;
+    }
+
+    private void watchFocus(View row, TextView name, String text, Runnable also) {
+        String upper = text.toUpperCase(Locale.ROOT);
+        row.setOnFocusChangeListener((v, has) -> {
+            name.setText((has ? "▶ " : "  ") + upper);
+            name.setTextColor(has ? Ui.YELLOW : Ui.WHITE);
+            if (has && keyMove) Sound.play(this, Sound.MOVE);
+            if (also != null) also.run();
+        });
+        name.setText("  " + upper);
     }
 
     private LinearLayout row() {
@@ -150,30 +166,14 @@ public final class Options extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setFocusable(true);
         row.setClickable(true);
-        row.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(600), WRAP);
-        lp.bottomMargin = dp(4);
-        row.setLayoutParams(lp);
+        row.setPadding(0, u * 4, 0, u * 4);
+        row.setLayoutParams(new LinearLayout.LayoutParams(u * 300, WRAP));
         return row;
-    }
-
-    private void style(View row) {
-        StateListDrawable bg = new StateListDrawable();
-        bg.addState(new int[] {android.R.attr.state_focused},
-                Ui.round((cfg.accent() & 0x00FFFFFF) | 0x33000000, dp(10)));
-        bg.addState(new int[0], Ui.round(0x00000000, dp(10)));
-        row.setBackground(bg);
-    }
-
-    private TextView label(String text) {
-        TextView v = Ui.text(this, 16, Ui.TEXT, Ui.MEDIUM);
-        v.setText(text);
-        return v;
     }
 
     private View gap() {
         View v = new View(this);
-        v.setLayoutParams(new LinearLayout.LayoutParams(1, dp(18)));
+        v.setLayoutParams(new LinearLayout.LayoutParams(1, u * 8));
         return v;
     }
 
@@ -181,30 +181,18 @@ public final class Options extends Activity {
         List<Item> items = Catalog.APPS.equals(kind)
                 ? Catalog.apps(this)
                 : Catalog.inputs(this, (TvInputManager) getSystemService(Context.TV_INPUT_SERVICE));
-        CharSequence[] names = new CharSequence[items.size()];
+        String[] names = new String[items.size()];
         boolean[] on = new boolean[items.size()];
         for (int i = 0; i < items.size(); i++) {
-            names[i] = Catalog.label(cfg, items.get(i));
+            names[i] = Catalog.label(cfg, items.get(i)).toString();
             on[i] = Catalog.shown(cfg, kind, items.get(i));
         }
-        new AlertDialog.Builder(this, Ui.DIALOG)
-                .setTitle(Catalog.APPS.equals(kind) ? "Apps on home screen" : "Inputs on home screen")
-                .setMultiChoiceItems(names, on, (d, which, checked) ->
-                        Catalog.setShown(cfg, kind, items.get(which), checked))
-                .setPositiveButton("Done", null)
-                .show();
+        RetroMenu.toggles(this, Catalog.APPS.equals(kind) ? "Apps on the shelf" : "Ports shown", names, on,
+                (which, checked) -> Catalog.setShown(cfg, kind, items.get(which), checked));
     }
 
     private void reset() {
-        new AlertDialog.Builder(this, Ui.DIALOG)
-                .setTitle("Reset the home screen layout?")
-                .setMessage("Order, names and hidden tiles go back to default. Colors and sizes stay.")
-                .setPositiveButton("Reset", (d, w) -> cfg.removePrefix("name.", "apps.", "inputs."))
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private int dp(float v) {
-        return Ui.dp(this, v);
+        RetroMenu.confirm(this, "Reset the shelf?", "Order, names and hidden carts go back to default.",
+                "RESET", () -> cfg.removePrefix("name.", "apps.", "inputs."));
     }
 }

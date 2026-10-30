@@ -162,6 +162,9 @@ fi
 
 sh_ cmd package set-home-activity $PKG/.Home >/dev/null 2>&1 || true
 set_futurity on
+# Fire OS moves its own home forward while the screen is off; Guard checks UsageStats on
+# screen off and on to take it back (no window event arrives while the screen is dark).
+sh_ appops set $PKG GET_USAGE_STATS allow
 set_guard $GUARD
 sleep 2
 # The setting alone proves nothing: Fire OS decides whether the service is bound. On
