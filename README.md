@@ -39,6 +39,69 @@ Ads, tracking and clutter out of your Fire TV. Your apps and HDMI inputs stay.</
 
 ---
 
+## This branch: Apple TV–style home (`tv1-appletv`)
+
+> A personal fork of [humblemuzzu/dumbtv](https://github.com/humblemuzzu/dumbtv). The debloat scripts are
+> unchanged. This branch restyles the **dumbtv home** launcher after tvOS. The sister branch
+> [`tv2-retro`](https://github.com/owheeler/dumbtv/tree/tv2-retro) has a retro game-console look for a kid's TV.
+
+![Top shelf: a painted mountain scene at sunrise above a dock of five apps](docs/assets/screens/appletv/top.jpg)
+
+| All apps | Settings, Options, Sleep and inputs |
+|---|---|
+| ![Five-column app grid over a blurred backdrop](docs/assets/screens/appletv/grid.jpg) | ![Built-in cards and HDMI pills](docs/assets/screens/appletv/cards.jpg) |
+
+| Sleep timer | Options | App menu |
+|---|---|---|
+| ![Sleep timer menu](docs/assets/screens/appletv/sleepmenu.jpg) | ![Options screen](docs/assets/screens/appletv/options.png) | ![Move, Rename, Hide, Check for updates, App info](docs/assets/screens/appletv/tilemenu.jpg) |
+
+**What's different from the stock dumbtv home**
+- **Top shelf:** a full-screen slideshow that cross-fades every 30 seconds (you can change the interval in
+  Options). It's reshuffled every time the TV wakes. Until you add photos, it shows six built-in mountain-and-sky
+  scenes. These are painted in code at run time, so the APK carries no image files.
+- **Your own photos:** copy `.jpg` or `.png` files into the launcher's `wallpapers/` folder and they replace the
+  built-in scenes:
+  `adb push photo.jpg /sdcard/Android/data/tv.dumbtv.home/files/wallpapers/`. Uninstalling the launcher deletes
+  that folder, so keep the originals.
+- **Dock:** the first five apps sit over the photo. The selected app lifts on a spring with a soft shadow and a
+  faint glare, and its name fades in underneath.
+- **Everything else:** scroll down and the photo slides away over a blurred, darkened copy of itself. Below it is
+  a five-column grid of the rest of your apps, then **Settings**, **Options** and **Sleep** cards, then your HDMI
+  inputs as pills.
+- **Rearranging:** hold OK or press Menu on an app, then choose **Move**. The arrows move it one place at a time
+  (up and down move a whole row), so the dock is simply the first five.
+- **Sleep timer:** 15 minutes to 2 hours. The time left shows next to the clock, and a panel warns you a minute
+  before the TV sleeps. It puts the TV into real standby through the accessibility service, because Amazon's own
+  timer only accepts Amazon-signed apps.
+- **App updates:** **Check for updates** in an app's menu opens its Appstore page. Options opens the whole
+  Appstore.
+- **Menus:** dialogs and Options are restyled as tvOS panels, with a white highlight and black text on the
+  selected row.
+
+**Fixes that also apply to stock dumbtv**
+- **Wake fix:** the TV sometimes woke up on Amazon's own home screen. If the TV goes to sleep while an app is open,
+  Fire OS moves its home screen to the front while the screen is dark, and the launcher's accessibility service
+  never sees it happen. The service now checks what's in front shortly after the screen turns off and again when
+  it turns on, using UsageStats. `install.sh` grants `GET_USAGE_STATS` through appops for this.
+- **No dead tiles:** apps the launcher could never open (such as AirPlay, which needs an Amazon-only permission)
+  are no longer shown as tiles.
+- **Windows builds:** `launcher/build.sh` now works in Git Bash on Windows. It finds the SDK and JDK, runs `d8` and
+  `apksigner` from their jars, and falls back to Python when `zip` is missing.
+
+**Build and install** (same as stock, in Git Bash or any shell):
+
+```sh
+adb connect <tv-ip>:5555
+ADB_SERIAL=<tv-ip>:5555 ./launcher/install.sh --build
+```
+
+A build of your own is signed with your own key (`launcher/release.keystore`, which is git-ignored, so keep a
+copy). The first time, uninstall the official release: `adb uninstall tv.dumbtv.home`. To go back to stock, run
+`adb uninstall tv.dumbtv.home`, then `./launcher/install.sh`. Design notes and measurements are in
+[APPLETV-PLAN.md](APPLETV-PLAN.md).
+
+---
+
 ## The story
 
 I had a Fire TV Edition television that had become painful to use. Menus lagged,
