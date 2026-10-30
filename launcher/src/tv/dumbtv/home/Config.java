@@ -84,7 +84,14 @@ final class Config {
             new String[] {"off", "visit", "hourly", "daily", "daytime"},
             new String[] {"Off", "Every return home", "Every hour", "Every day", "By time of day"});
 
-    static final Choice[] CHOICES = {ACCENT, TILES, LAYOUT, LABELS, CLOCK, INPUTS, SWITCH, BACKGROUND, DIM, ROTATE};
+    static final Choice SHELF = new Choice("shelf.interval", "Change photo every", "30",
+            new String[] {"15", "30", "60", "300", "0"},
+            new String[] {"15 seconds", "30 seconds", "Minute", "5 minutes", "Never"});
+
+    static final Choice[] CHOICES = {SHELF, CLOCK, INPUTS, SWITCH};
+
+    /** Wall-clock end of the sleep timer, and a flag when it could not put the TV to sleep. */
+    static final String SLEEP_AT = "sleep.at", SLEEP_FAILED = "sleep.failed";
 
     /** Folder of wallpapers, next to home.conf, that Background › Image file rotates through. */
     static final String WALLPAPERS = "wallpapers";
@@ -93,7 +100,6 @@ final class Config {
     private static final int[] ACCENTS = {
         0xFFFFFFFF, 0xFF3D8BFF, 0xFF2BC4E8, 0xFF34C759, 0xFFFFB340, 0xFFFF5147, 0xFFFF5C9D, 0xFFA07CFF,
     };
-    private static final int[] BACKGROUNDS = {0xFF000000, 0xFF141518, 0xFF0B1220, 0xFF000000, 0xFF141518, 0xFF141518};
 
     private static Config instance;
 
@@ -216,7 +222,15 @@ final class Config {
     }
 
     int background() {
-        return BACKGROUNDS[Arrays.asList(BACKGROUND.values).indexOf(get(BACKGROUND))];
+        return Ui.BG;
+    }
+
+    long getLong(String key) {
+        try {
+            return Long.parseLong(get(key, "0"));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** Counts returns to the home screen, for the "visit" rotation. */

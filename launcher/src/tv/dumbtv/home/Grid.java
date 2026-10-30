@@ -16,12 +16,12 @@ import android.view.ViewGroup;
 final class Grid extends ViewGroup {
     private final int hGap, vGap;
 
-    Grid(Context c) {
+    Grid(Context c, int hGap, int vGap) {
         super(c);
         setClipChildren(false);
         setClipToPadding(false);
-        hGap = Ui.dp(c, 18);
-        vGap = Ui.dp(c, 18);
+        this.hGap = hGap;
+        this.vGap = vGap;
     }
 
     private int columns(int availableWidth, int childWidth) {

@@ -1,14 +1,11 @@
 package tv.dumbtv.home;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.graphics.drawable.StateListDrawable;
+import android.content.Intent;
 import android.media.tv.TvInputManager;
 import android.os.Bundle;
-import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -16,12 +13,13 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Every setting is a row: left/right or OK cycles it, and the change is saved at once. */
+/** tvOS Settings style: every setting is a row; left/right or OK cycles it, saved at once. */
 public final class Options extends Activity {
     private static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
 
@@ -36,23 +34,33 @@ public final class Options extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFocusable(false);
         scroll.setVerticalScrollBarEnabled(false);
-        scroll.setBackgroundColor(0xFF0C0C0E);
+        scroll.setBackgroundColor(Ui.BG);
+        scroll.setClipChildren(false);
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(56), dp(40), dp(56), dp(40));
+        list.setGravity(Gravity.CENTER_HORIZONTAL);
+        list.setClipChildren(false);
+        list.setPadding(dp(56), dp(44), dp(56), dp(44));
         scroll.addView(list);
 
-        TextView title = Ui.text(this, 30, Ui.TEXT, Ui.LIGHT);
+        TextView title = Ui.text(this, 30, Ui.TEXT, Ui.MEDIUM);
         title.setText("Options");
-        title.setPadding(dp(16), 0, 0, dp(20));
+        title.setGravity(Gravity.CENTER_HORIZONTAL);
+        title.setPadding(0, 0, 0, dp(28));
         list.addView(title);
 
         for (Config.Choice c : Config.CHOICES) list.addView(choice(c));
-        list.addView(action("Next wallpaper", () -> {
-            cfg.nextWallpaper();
-            refresh();
-        }));
         list.addView(gap());
+        Intent store = Catalog.appstore(this);
+        if (store != null) {
+            list.addView(action("Appstore (app updates)", () -> {
+                try {
+                    startActivity(store.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (ActivityNotFoundException | SecurityException e) {
+                    Toast.makeText(this, "Could not open the Appstore", Toast.LENGTH_SHORT).show();
+                }
+            }));
+        }
         list.addView(action("Apps on home screen", () -> pick(Catalog.APPS)));
         list.addView(action("Inputs on home screen", () -> pick(Catalog.INPUTS)));
         list.addView(action("Reset order, names and hidden tiles", this::reset));
@@ -61,16 +69,15 @@ public final class Options extends Activity {
             finish();
         }));
 
-        TextView about = Ui.text(this, 13, Ui.FAINT, Ui.MEDIUM);
+        TextView about = Ui.text(this, 13, Ui.FAINT, Ui.REGULAR);
         about.setLineSpacing(0, 1.4f);
-        about.setPadding(dp(16), dp(28), 0, 0);
-        about.setText("Settings file: " + cfg.dir + "/" + Config.FILE
-                + "\nOne wallpaper: name it exactly wallpaper.jpg (or .png) and put it in that folder"
-                + "\nSeveral wallpapers: put them in " + Config.WALLPAPERS + "/ with any names, and pick a rotation"
-                + "\nThen pick Background › Image file or Adaptive wallpaper tint. No permission is needed"
-                + "\nAdaptive wallpaper tint shows graphite until you add a wallpaper"
+        about.setPadding(dp(18), dp(28), dp(18), 0);
+        about.setText("Your own photos: copy .jpg or .png files into " + cfg.dir + "/" + Config.WALLPAPERS
+                + "/ and they replace the built-in scenery. They shuffle every time the TV wakes."
+                + "\nRearrange: hold OK on an app (or press Menu), then Move. The first five apps sit in the top row."
+                + "\nSettings file: " + cfg.dir + "/" + Config.FILE
                 + "\nNo internet permission. No tracking, no ads, no accounts.");
-        list.addView(about);
+        list.addView(about, new LinearLayout.LayoutParams(dp(640), WRAP));
 
         setContentView(scroll);
         refresh();
@@ -90,7 +97,7 @@ public final class Options extends Activity {
     private View choice(Config.Choice c) {
         LinearLayout row = row();
         TextView name = label(c.title);
-        TextView value = Ui.text(this, 16, Ui.MUTED, Ui.MEDIUM);
+        TextView value = Ui.text(this, 17, Ui.MUTED, Ui.REGULAR);
         value.setGravity(Gravity.END);
         row.addView(name, new LinearLayout.LayoutParams(0, WRAP, 1f));
         row.addView(value, new LinearLayout.LayoutParams(WRAP, WRAP));
@@ -104,25 +111,14 @@ public final class Options extends Activity {
         Runnable show = () -> {
             boolean focused = row.isFocused();
             String text = c.name(cfg.get(c));
-            if (c == Config.ACCENT) {
-                SpannableString s = new SpannableString("●  " + text);
-                s.setSpan(new ForegroundColorSpan(cfg.accent()), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                value.setText(focused ? "‹  " : "");
-                value.append(s);
-                if (focused) value.append("  ›");
-            } else {
-                value.setText(focused ? "‹  " + text + "  ›" : text);
-            }
-            value.setTextColor(focused ? Ui.TEXT : Ui.MUTED);
-            boolean off = (c == Config.DIM || c == Config.ROTATE)
-                    && !"image".equals(cfg.get(Config.BACKGROUND))
-                    && !"adaptive-tint".equals(cfg.get(Config.BACKGROUND))
-                    || c == Config.SWITCH && "off".equals(cfg.get(Config.INPUTS));
+            value.setText(focused ? "‹  " + text + "  ›" : text);
+            value.setTextColor(focused ? 0x99000000 : Ui.MUTED);
+            name.setTextColor(focused ? 0xFF000000 : Ui.TEXT);
+            boolean off = c == Config.SWITCH && "off".equals(cfg.get(Config.INPUTS));
             row.setAlpha(off ? 0.4f : 1f);
         };
-        row.setOnFocusChangeListener((v, has) -> show.run());
+        focus(row, show);
         refreshers.add(show);
-        refreshers.add(() -> style(row));
         return row;
     }
 
@@ -136,13 +132,28 @@ public final class Options extends Activity {
 
     private View action(String text, Runnable run) {
         LinearLayout row = row();
-        row.addView(label(text), new LinearLayout.LayoutParams(0, WRAP, 1f));
-        TextView chevron = Ui.text(this, 16, Ui.MUTED, Ui.MEDIUM);
+        TextView name = label(text);
+        row.addView(name, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        TextView chevron = Ui.text(this, 17, Ui.MUTED, Ui.REGULAR);
         chevron.setText("›");
         row.addView(chevron);
         row.setOnClickListener(v -> run.run());
-        refreshers.add(() -> style(row));
+        focus(row, () -> {
+            boolean focused = row.isFocused();
+            name.setTextColor(focused ? 0xFF000000 : Ui.TEXT);
+            chevron.setTextColor(focused ? 0x99000000 : Ui.MUTED);
+        });
         return row;
+    }
+
+    /** White fill and a small lift on focus, like a tvOS Settings row. */
+    private void focus(View row, Runnable also) {
+        row.setOnFocusChangeListener((v, has) -> {
+            v.setBackground(Ui.round(has ? 0xFFFFFFFF : 0, dp(12)));
+            v.animate().scaleX(has ? 1.03f : 1f).scaleY(has ? 1.03f : 1f)
+                    .setInterpolator(has ? Ui.SPRING : null).setDuration(has ? 240 : 140).start();
+            also.run();
+        });
     }
 
     private LinearLayout row() {
@@ -150,30 +161,22 @@ public final class Options extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setFocusable(true);
         row.setClickable(true);
-        row.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(600), WRAP);
-        lp.bottomMargin = dp(4);
+        row.setPadding(dp(20), dp(15), dp(20), dp(15));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(640), WRAP);
+        lp.bottomMargin = dp(6);
         row.setLayoutParams(lp);
         return row;
     }
 
-    private void style(View row) {
-        StateListDrawable bg = new StateListDrawable();
-        bg.addState(new int[] {android.R.attr.state_focused},
-                Ui.round((cfg.accent() & 0x00FFFFFF) | 0x33000000, dp(10)));
-        bg.addState(new int[0], Ui.round(0x00000000, dp(10)));
-        row.setBackground(bg);
-    }
-
     private TextView label(String text) {
-        TextView v = Ui.text(this, 16, Ui.TEXT, Ui.MEDIUM);
+        TextView v = Ui.text(this, 17, Ui.TEXT, Ui.MEDIUM);
         v.setText(text);
         return v;
     }
 
     private View gap() {
         View v = new View(this);
-        v.setLayoutParams(new LinearLayout.LayoutParams(1, dp(18)));
+        v.setLayoutParams(new LinearLayout.LayoutParams(1, dp(22)));
         return v;
     }
 
@@ -181,27 +184,19 @@ public final class Options extends Activity {
         List<Item> items = Catalog.APPS.equals(kind)
                 ? Catalog.apps(this)
                 : Catalog.inputs(this, (TvInputManager) getSystemService(Context.TV_INPUT_SERVICE));
-        CharSequence[] names = new CharSequence[items.size()];
+        String[] names = new String[items.size()];
         boolean[] on = new boolean[items.size()];
         for (int i = 0; i < items.size(); i++) {
-            names[i] = Catalog.label(cfg, items.get(i));
+            names[i] = Catalog.label(cfg, items.get(i)).toString();
             on[i] = Catalog.shown(cfg, kind, items.get(i));
         }
-        new AlertDialog.Builder(this, Ui.DIALOG)
-                .setTitle(Catalog.APPS.equals(kind) ? "Apps on home screen" : "Inputs on home screen")
-                .setMultiChoiceItems(names, on, (d, which, checked) ->
-                        Catalog.setShown(cfg, kind, items.get(which), checked))
-                .setPositiveButton("Done", null)
-                .show();
+        TvMenu.toggles(this, Catalog.APPS.equals(kind) ? "Apps on home screen" : "Inputs on home screen",
+                names, on, (which, checked) -> Catalog.setShown(cfg, kind, items.get(which), checked));
     }
 
     private void reset() {
-        new AlertDialog.Builder(this, Ui.DIALOG)
-                .setTitle("Reset the home screen layout?")
-                .setMessage("Order, names and hidden tiles go back to default. Colors and sizes stay.")
-                .setPositiveButton("Reset", (d, w) -> cfg.removePrefix("name.", "apps.", "inputs."))
-                .setNegativeButton("Cancel", null)
-                .show();
+        TvMenu.confirm(this, "Reset the home screen?", "Order, names and hidden tiles go back to default.",
+                "Reset", () -> cfg.removePrefix("name.", "apps.", "inputs."));
     }
 
     private int dp(float v) {

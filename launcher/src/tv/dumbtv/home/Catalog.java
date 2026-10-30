@@ -20,27 +20,50 @@ import java.util.Map;
 /** Where tiles come from, and which of them the user wants on the home screen. */
 final class Catalog {
     static final String APPS = "apps", INPUTS = "inputs";
+    static final String APPSTORE = "com.amazon.venezia";
 
     private Catalog() {}
+
+    /** Amazon's Appstore; it ships no TV banner, so it never shows as a tile unless ticked in Options. */
+    static Intent appstore(Context c) {
+        return c.getPackageManager().getLaunchIntentForPackage(APPSTORE);
+    }
+
+    /** The Appstore's own page for {@code pkg}, where its Update button is. */
+    static Intent appstorePage(String pkg) {
+        return new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("amzn://apps/android?p=" + pkg));
+    }
+
+    static boolean fromAppstore(Context c, String pkg) {
+        try {
+            return APPSTORE.equals(c.getPackageManager().getInstallerPackageName(pkg));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
 
     /** Every launchable app, TV apps first; drawables are left for {@link #art}. */
     static List<Item> apps(Context c) {
         PackageManager pm = c.getPackageManager();
         Map<String, Item> found = new LinkedHashMap<>();
-        collect(pm, found, Intent.CATEGORY_LEANBACK_LAUNCHER, true, c.getPackageName());
-        collect(pm, found, Intent.CATEGORY_LAUNCHER, false, c.getPackageName());
+        collect(c, pm, found, Intent.CATEGORY_LEANBACK_LAUNCHER, true);
+        collect(c, pm, found, Intent.CATEGORY_LAUNCHER, false);
         List<Item> out = new ArrayList<>(found.values());
         Collator collator = Collator.getInstance();
         Collections.sort(out, (a, b) -> collator.compare(a.label.toString(), b.label.toString()));
         return out;
     }
 
-    private static void collect(PackageManager pm, Map<String, Item> found, String category,
-            boolean leanback, String self) {
+    private static void collect(Context c, PackageManager pm, Map<String, Item> found, String category,
+            boolean leanback) {
+        String self = c.getPackageName();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(category);
         for (ResolveInfo ri : pm.queryIntentActivities(query, 0)) {
             ActivityInfo ai = ri.activityInfo;
             if (ai.packageName.equals(self) || found.containsKey(ai.packageName)) continue;
+            // e.g. AirPlay on Fire OS needs com.amazon.airplay.permission.LAUNCH: a tile could never open it.
+            if (ai.permission != null
+                    && c.checkSelfPermission(ai.permission) != PackageManager.PERMISSION_GRANTED) continue;
             Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(category)
                     .setClassName(ai.packageName, ai.name);
             Item it = new Item(ai.packageName, ri.loadLabel(pm), launch);
