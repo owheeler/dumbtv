@@ -39,6 +39,90 @@ Ads, tracking and clutter out of your Fire TV. Your apps and HDMI inputs stay.</
 
 ---
 
+## This branch: RETRO-TV home (`tv2-retro`)
+
+> A personal fork of [humblemuzzu/dumbtv](https://github.com/humblemuzzu/dumbtv). The debloat scripts are
+> unchanged. This branch gives the **dumbtv home** launcher a retro game-console look for a kid's TV.
+> The sister branch [`tv1-appletv`](https://github.com/owheeler/dumbtv/tree/tv1-appletv) has an Apple TV–style
+> look for the living room.
+
+| Power on | Cartridge shelf | Sleep timer |
+|---|---|---|
+| ![PRESS START screen](docs/assets/screens/retro/start.png) | ![Apps as game cartridges, HDMI ports below](docs/assets/screens/retro/shelf.png) | ![Sleep timer menu](docs/assets/screens/retro/sleep.png) |
+
+**What's different from the stock dumbtv home**
+- **The shelf:** every app is a game cartridge, and the app's own banner is the label. The selected cartridge lifts
+  out of its slot, and pressing OK plays an insert animation before the app opens. HDMI inputs show as console
+  **PORTS** along the bottom.
+- **The look:** a pixel font ([Press Start 2P](launcher/assets/fonts/OFL.txt), OFL), an 8-bit colour palette, and
+  dialog boxes styled like an RPG game.
+- **Sound effects:** short square-wave beeps at a low volume. You can turn them off in Options.
+  [`launcher/tools/make_sounds.py`](launcher/tools/make_sounds.py) generates them, so no audio files are borrowed
+  from anywhere.
+- **PRESS START:** a title screen when the TV wakes, showing *RETRO-TV / HOME CONSOLE*. Any key dismisses it.
+- **Parent mode:** hold **Menu for 3 seconds** to open Options, TV settings and the cartridge menu (move, rename,
+  hide, app info). Parent mode switches itself off after 2 minutes, or as soon as an app is opened.
+- **Sleep timer:** the **SLEEP** button is always available, no parent mode needed. It offers 15, 30, 45, 60 or
+  90 minutes, or 2 hours, and a "GAME OVER IN 60" warning appears a minute before the end. It puts the TV into
+  real standby through the accessibility service (`GLOBAL_ACTION_LOCK_SCREEN`), because Amazon's own sleep timer
+  only accepts Amazon-signed apps.
+- **App updates:** in parent mode, hold OK on a cartridge and pick **Appstore page** to update that app. Options
+  also has an **Open Appstore** entry.
+
+<details>
+<summary><b>Spoiler: the Secret Arcade</b> 🥚</summary>
+
+<br>
+
+There's a faint pixel egg in the bottom-left corner of the home screen. You can only reach it by pressing LEFT
+from the first item in the bottom row. Select it and press OK three times: crack, crack, hatch.
+
+| The egg (zoomed) | Secret Arcade |
+|---|---|
+| ![A small speckled egg next to PORTS](docs/assets/screens/retro/egg-corner.png) | ![Three game cartridges: Snake Byte, Brick Bop, Star Swarm](docs/assets/screens/retro/arcade.png) |
+
+| SNAKE BYTE | BRICK BOP | STAR SWARM |
+|---|---|---|
+| ![Snake game](docs/assets/screens/retro/snake.png) | ![Brick breaker game](docs/assets/screens/retro/bricks.png) | ![Space shooter game](docs/assets/screens/retro/swarm.png) |
+
+Three short, original games, played with just the D-pad and OK:
+- **SNAKE BYTE:** classic snake. It speeds up with every berry, and a gold star appears every eighth berry.
+- **BRICK BOP:** six levels drawn as pictures out of bricks. Some bricks take two hits and steel ones never break.
+  Capsules drop for a wide paddle, three balls, a slow ball, or an extra life.
+- **STAR SWARM:** your ship fires on its own, because the remote can't press a direction and OK together. Aliens
+  swoop into a swaying formation, then dive at you. A bonus UFO gives twin shot or a shield, and every fourth
+  wave is a meteor shower.
+
+Every game has a pause menu (BACK or Play/Pause) and keeps one best score. The sleep timer's warning pauses the
+game. In parent mode, Options can hide the egg or reset the scores. Everything is drawn on a 320×180 canvas,
+scaled up with hard pixel edges, and runs at a steady 60 fps on an AFTTI43. No libraries are used and nothing
+touches the internet.
+</details>
+
+**Fixes that also apply to stock dumbtv**
+- **Wake fix:** the TV sometimes woke up on Amazon's own home screen. If the TV goes to sleep while an app is open,
+  Fire OS moves its home screen to the front while the screen is dark, and the launcher's accessibility service
+  never sees it happen. The service now checks what's in front shortly after the screen turns off and again when
+  it turns on, using UsageStats. `install.sh` grants `GET_USAGE_STATS` through appops for this.
+- **No dead tiles:** apps the launcher could never open (such as AirPlay, which needs an Amazon-only permission)
+  are no longer shown as tiles.
+- **Windows builds:** `launcher/build.sh` now works in Git Bash on Windows. It finds the SDK and JDK, runs `d8` and
+  `apksigner` from their jars, and falls back to Python when `zip` is missing. It also bundles `assets/`.
+
+**Build and install** (same as stock, in Git Bash or any shell):
+
+```sh
+adb connect <tv-ip>:5555
+ADB_SERIAL=<tv-ip>:5555 ./launcher/install.sh --build
+```
+
+A build of your own is signed with your own key (`launcher/release.keystore`, which is git-ignored, so keep a
+copy). The first time, uninstall the official release: `adb uninstall tv.dumbtv.home`. To go back to stock, run
+`adb uninstall tv.dumbtv.home`, then `./launcher/install.sh`. Design notes are in
+[RETRO-PLAN.md](RETRO-PLAN.md) and [EGGS-PLAN.md](EGGS-PLAN.md).
+
+---
+
 ## The story
 
 I had a Fire TV Edition television that had become painful to use. Menus lagged,
