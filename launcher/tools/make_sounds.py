@@ -54,6 +54,17 @@ SOUNDS = {
     "sfx_start": tones((C5, 90), (E5, 90), (G5, 90), (C6, 140), (0, 50), (G5, 70), (C6, 260)),
     "sfx_warn": tones((B5, 90), (0, 70), (B5, 90), (0, 70), (B5, 160)),
     "sfx_sleep": tones((G6, 80), (E6, 80), (C6, 80), (G5, 90), (E5, 100), (C5, 260)),
+    # Secret Arcade
+    "sfx_crack": tones((180, 25), (0, 15), (140, 30)),
+    "sfx_hatch": tones((C5, 60), (E5, 60), (G5, 60), (C6, 60), (E6, 60), (G6, 160)),
+    "sfx_eat": tones((E6, 30), (G6, 45)),
+    "sfx_bounce": tones((G5, 22)),
+    "sfx_brick": tones((C6, 35)),
+    "sfx_shoot": tones((E6, 14), (B5, 14)),
+    "sfx_boom": tones((160, 40), (120, 40), (90, 60), (70, 80)),
+    "sfx_power": tones((C6, 50), (E6, 50), (G6, 50), (C6 * 2, 90)),
+    "sfx_level": tones((G5, 80), (C6, 80), (E6, 80), (G6, 200)),
+    "sfx_over": tones((G5, 140), (E5, 140), (C5, 140), (G5 / 2, 320)),
 }
 
 if __name__ == "__main__":

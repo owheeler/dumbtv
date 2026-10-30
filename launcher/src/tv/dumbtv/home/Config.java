@@ -97,7 +97,11 @@ final class Config {
             new String[] {"off", "on"},
             new String[] {"Off", "On"});
 
-    static final Choice[] CHOICES = {SOUNDS, START, PIXEL, SCANLINES, CLOCK, INPUTS, SWITCH};
+    static final Choice ARCADE = new Choice("arcade", "Secret arcade", "on",
+            new String[] {"on", "off"},
+            new String[] {"On", "Off"});
+
+    static final Choice[] CHOICES = {SOUNDS, START, PIXEL, SCANLINES, CLOCK, INPUTS, SWITCH, ARCADE};
 
     static final String SLEEP_AT = "sleep.at", SLEEP_FAILED = "sleep.failed";
 

@@ -143,6 +143,7 @@ public final class Guard extends AccessibilityService {
         Guard g = running;
         if (g == null) return;
         Sound.play(c, Sound.WARN);
+        Arcade.interrupt();
         g.showWarning();
     }
 

@@ -61,6 +61,13 @@
             android:name=".Keeper"
             android:exported="false" />
 
+        <activity
+            android:name=".Arcade"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode" />
+
         <receiver
             android:name=".Sleep"
             android:exported="false" />

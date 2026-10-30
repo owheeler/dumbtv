@@ -63,6 +63,8 @@ public final class Options extends Activity {
         list.addView(action("Apps on the shelf", () -> pick(Catalog.APPS)));
         list.addView(action("Ports shown", () -> pick(Catalog.INPUTS)));
         list.addView(action("Reset order, names, hidden", this::reset));
+        list.addView(action("Reset arcade high scores", () -> RetroMenu.confirm(this, "Reset high scores?",
+                "Best scores in all three arcade games go back to zero.", "RESET", () -> Scores.reset(cfg))));
         list.addView(action("Open Amazon's home screen", () -> {
             Guard.amazon(this);
             finish();

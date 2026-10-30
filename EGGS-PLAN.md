@@ -1,6 +1,22 @@
 # dumbtv home: "Secret Arcade" easter egg plan (TV2 retro launcher)
 
-Status: PLAN ONLY, decisions confirmed (2026-10-27). Builds on the retro Cartridge Shelf launcher in `RETRO-PLAN.md`.
+Status: **BUILT AND INSTALLED on TV2, 2026-10-30.** Builds on the retro Cartridge Shelf launcher in `RETRO-PLAN.md`.
+
+## As built (2026-10-30)
+- **Files:** `Egg`, `Arcade` (the activity, the 60 Hz loop, the menu and pause screen), `Game` (the shared GET READY, score bar,
+  lives and GAME OVER card), `Pix` (sprites from text maps and the pixel font at 8 px), `Scores`, `Snake`, `Bricks` and `Swarm`.
+  That's fewer files than planned; Engine, Screen and Sprites were folded in.
+- **Size and speed:** the APK is 239 KB (it was 165 KB). On TV2, in game, it ran 60 fps with 0 janky frames, about 5 ms per
+  frame, and 68 MB PSS.
+- **Egg:** hidden in the left margin of the bottom row at 45% opacity; when focused it turns cream with green spots.
+  Options has `Secret arcade` on/off and `Reset arcade high scores` (parent mode).
+- **Sound:** 10 new effects from `make_sounds.py`, and SoundPool goes up to 4 streams. STAR SWARM's auto-fire is silent,
+  because a constant pew-pew would get annoying.
+- **Bug found on the TV:** `Integer.parseInt("FF......", 16)` overflows, so sprite colours are now parsed with
+  `Long.parseLong`.
+- **Testing notes:** adb `input keyevent` takes about 0.5 s per key on these TVs, too slow to play SNAKE BYTE remotely.
+  Steering, collisions, scoring, power-ups and every screen were checked from screenshots. The pause on the sleep
+  warning (`Arcade.interrupt()` in `Guard.warn`) was not tested on the TV.
 
 ## Goal
 Add a small, easy-to-miss pixel egg in a corner of the TV2 home screen. Selecting it and pressing OK three

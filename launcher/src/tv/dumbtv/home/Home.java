@@ -67,6 +67,7 @@ public final class Home extends Activity {
     private View scan;
     private TextView badge, sleepText, clock, name, prompt, portsLabel, startPrompt;
     private TextView sleepButton, optionsButton, setupButton;
+    private Egg egg;
     private HorizontalScrollView shelf, ports;
     private LinearLayout strip, portStrip;
     private int cartW;
@@ -350,7 +351,11 @@ public final class Home extends Activity {
                     View above = nearest(strip, focused);
                     if (above != null) return above;
                 }
-                return super.focusSearch(focused, direction);
+                View next = super.focusSearch(focused, direction);
+                // The egg is only a LEFT away from the bottom row, never a diagonal hop from the
+                // first cartridge on the shelf.
+                if (next == egg && focused != null && focused.getParent() == strip) return null;
+                return next;
             }
         };
         column.setOrientation(LinearLayout.VERTICAL);
@@ -423,8 +428,19 @@ public final class Home extends Activity {
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setGravity(Gravity.CENTER_VERTICAL);
-        bottom.setPadding(side, 0, side, 0);
         bottom.setClipChildren(false);
+        // The egg sits in the left margin, so PORTS: stays where it was. LEFT from the first item
+        // of the bottom row is the only way onto it.
+        egg = new Egg(this, () -> startActivity(new Intent(this, Arcade.class)));
+        egg.setOnFocusChangeListener((v, has) -> {
+            if (!has) return;
+            if (keyMove) Sound.play(this, Sound.MOVE);
+            say("? ? ?", "");
+        });
+        bottom.setPadding(u * 4, 0, side, 0);
+        LinearLayout.LayoutParams eggLp = new LinearLayout.LayoutParams(WRAP, WRAP);
+        eggLp.rightMargin = side - u * 4 - u * 8;
+        bottom.addView(egg, eggLp);
         portsLabel = Ui.pixelText(this, 6, Ui.GREY);
         portsLabel.setText("PORTS:");
         portsLabel.setPadding(0, 0, u * 4, 0);
@@ -539,6 +555,10 @@ public final class Home extends Activity {
         scanlines();
         tick();
         showParent();
+        boolean arcade = cfg.on(Config.ARCADE);
+        if (!arcade && egg.isFocused()) sleepButton.requestFocus();
+        egg.setVisibility(arcade ? View.VISIBLE : View.INVISIBLE);
+        egg.setFocusable(arcade);
     }
 
     private void scanlines() {
